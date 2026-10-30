@@ -16,6 +16,7 @@ interface PlanSheetProps {
   initialKeepAfterTrial: boolean;
   flow: SubscribeFlow;
   status: Loadable<MySubscription | null>;
+  usedTrials: string[] | null;
   walletAddress: string | null;
   onSubscribe: (plan: Plan, autoRenew: boolean) => void;
   onResetFlow: () => void;
@@ -73,6 +74,7 @@ const PlanSheet = ({ open, flow, onResetFlow, onClose, ...props }: PlanSheetProp
           initialKeepAfterTrial={props.initialKeepAfterTrial}
           flow={flow}
           status={props.status}
+          usedTrials={props.usedTrials}
           walletAddress={props.walletAddress}
           onSubscribe={props.onSubscribe}
         />

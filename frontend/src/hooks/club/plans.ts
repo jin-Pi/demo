@@ -49,9 +49,12 @@ export const isRenewalDue = (status: Loadable<MySubscription | null>, serviceId:
 export const awaitsRenewal = (mine: MySubscription) =>
   mine.renewalDueServiceIds.includes(String(mine.subscription.service_id));
 
-// the plan as this wallet would get it: without the free trial once the wallet has had it
-export const planFor = (status: Loadable<MySubscription | null>, plan: Plan): Plan => {
-  const trialUsed = status.status === "ready" && !!status.value?.trialUsedServiceIds.includes(plan.serviceId);
+// The plan as this wallet would get it: without the free trial once the wallet has had it. usedTrials comes from
+// the contract's has_used_trial (null when the SDK can't ask); the subscription list is evidence too, either way.
+export const planFor = (status: Loadable<MySubscription | null>, usedTrials: string[] | null, plan: Plan): Plan => {
+  const trialUsed =
+    !!usedTrials?.includes(plan.serviceId) ||
+    (status.status === "ready" && !!status.value?.trialUsedServiceIds.includes(plan.serviceId));
   return trialUsed ? { ...plan, trialSecs: 0 } : plan;
 };
 

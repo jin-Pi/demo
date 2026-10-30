@@ -53,6 +53,21 @@ export const loadPlans = async () => {
 
 export const plansFailure = (err: unknown) => failure({ error: "Couldn't load the plans.", retry: true, err });
 
+// The trial plans this wallet has had the free trial of, from the contract's has_used_trial: the check subscribe()
+// itself makes, so it still holds once the wallet's subscriptions to a plan have left its list. Null when the SDK
+// has no hasUsedTrial yet; the subscription list's trialUsedServiceIds is then all there is to go on.
+export const loadUsedTrials = async (walletAddress: string, plans: Plan[]): Promise<string[] | null> => {
+  const { Subscription } = window.Pi.SmartContract;
+  if (!Subscription.hasUsedTrial) {
+    return null;
+  }
+  const trialPlans = plans.filter(plan => plan.trialSecs > 0);
+  const used = await Promise.all(
+    trialPlans.map(plan => read(Subscription.hasUsedTrial!(walletAddress, plan.serviceId), "your free trials"))
+  );
+  return trialPlans.filter((_plan, index) => used[index]).map(plan => plan.serviceId);
+};
+
 const serviceIdsOf = (subscriptions: ContractSubscription[]) => [
   ...new Set(subscriptions.map(subscription => String(subscription.service_id))),
 ];

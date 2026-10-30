@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect } from "react";
 import {
   loadMySubscription,
   loadPlans,
+  loadUsedTrials,
   loadWallet,
   plansFailure,
   subscriptionFailure,
@@ -34,12 +35,23 @@ export const useClubSubscription = (enabled: boolean, sessionId: number, walletW
     () => loadMySubscription(walletAddress!, readyPlans!),
     subscriptionFailure
   );
-  const attempt = useSubscribeAttempt(walletAddress, key, mine.retry);
+  const trials = useKeyedRead(
+    key && readyPlans ? `trials:${key}` : null,
+    () => loadUsedTrials(walletAddress!, readyPlans!),
+    subscriptionFailure
+  );
+  const { retry: rereadMine } = mine;
+  const { retry: rereadTrials } = trials;
+  // a subscription that lands may have used a trial, so both are read again
+  const rereadSubscriptions = useCallback(() => {
+    rereadMine();
+    rereadTrials();
+  }, [rereadMine, rereadTrials]);
+  const attempt = useSubscribeAttempt(walletAddress, key, rereadSubscriptions);
 
   // An active subscription runs out at its end time, so it is read again then: a page left open does not stay
   // unlocked. Past the longest timer the browser allows, the next visit's read covers it.
   const activeUntil = mine.state.status === "ready" ? (mine.state.value?.activeUntil ?? null) : null;
-  const { retry: rereadMine } = mine;
   useEffect(() => {
     if (activeUntil === null) {
       return;
@@ -53,18 +65,22 @@ export const useClubSubscription = (enabled: boolean, sessionId: number, walletW
   }, [activeUntil, rereadMine]);
 
   // one status for the screens: the first thing that failed or is not ready yet is what they show
-  const failed = [wallet, plans, mine].find(read => read.state.status === "error");
-  const status: Loadable<MySubscription | null> = failed?.state.status === "error" ? failed.state : mine.state;
+  // (the trial read counts too, so a trial already used is never offered while it is still on its way)
+  const failed = [wallet, plans, mine, trials].find(read => read.state.status === "error");
+  const status: Loadable<MySubscription | null> =
+    failed?.state.status === "error" ? failed.state : trials.state.status === "loading" ? trials.state : mine.state;
 
   return {
     enabled,
     walletAddress,
     plans: readyPlans?.filter(plan => plan.offered) ?? [],
     status,
+    // the trial plans this wallet has had the trial of, per has_used_trial; null when the SDK can't ask (see planFor)
+    usedTrials: trials.state.status === "ready" ? trials.state.value : null,
     // tries again whatever failed; offered only when status.retry says it can help
-    retry: failed?.retry ?? mine.retry,
+    retry: failed?.retry ?? rereadSubscriptions,
     // reads the user's subscription again, e.g. when a transaction may have landed after we stopped waiting
-    refresh: mine.retry,
+    refresh: rereadSubscriptions,
     ...attempt,
   };
 };

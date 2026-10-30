@@ -52,7 +52,7 @@ const SubscriptionSection = ({ onOpenClub, openOnMount, developerTools }: Subscr
   // a pending attempt whose plan the contract now lists as active has landed: the active plan wins
   const pendingLanded = flow.phase === "unconfirmed" && hasActivePlan(status, flow.plan.serviceId);
   // offered only while this wallet has not had the trial
-  const trialPlan = plans.find(plan => planFor(status, plan).trialSecs > 0);
+  const trialPlan = plans.find(plan => planFor(status, club.usedTrials, plan).trialSecs > 0);
   // a plan this wallet can start now: neither active nor waiting for its renewal
   const isOpen = (plan: Plan) => !hasActivePlan(status, plan.serviceId) && !isRenewalDue(status, plan.serviceId);
   // a pending attempt shows on the card while the sheet is closed, as does one in progress
@@ -155,6 +155,7 @@ const SubscriptionSection = ({ onOpenClub, openOnMount, developerTools }: Subscr
             initialKeepAfterTrial={sheet?.keepAfterTrial ?? true}
             flow={flow}
             status={status}
+            usedTrials={club.usedTrials}
             walletAddress={club.walletAddress}
             onSubscribe={club.subscribe}
             // back to the plans after a result, on the plan and trial choice that was tried; a sheet that reopened

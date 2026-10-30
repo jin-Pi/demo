@@ -52,6 +52,8 @@ declare global {
           getMerchantServices(merchant: string): Promise<SubscriptionService[]>;
           getSubscriberSubscriptions(subscriber: string): Promise<ContractSubscription[]>;
           isSubscriptionActive(subscriber: string, serviceId: string): Promise<boolean>;
+          // the contract's has_used_trial, from contract version 2 on; SDKs without it leave it undefined
+          hasUsedTrial?(subscriber: string, serviceId: string): Promise<boolean>;
         };
 
         pollTransaction(

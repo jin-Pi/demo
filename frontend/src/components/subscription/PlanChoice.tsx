@@ -29,6 +29,8 @@ interface PlanChoiceProps {
   flow: SubscribeFlow;
   // the wallet's subscriptions as last read; subscribing waits until they are known
   status: Loadable<MySubscription | null>;
+  // the trial plans has_used_trial reports as used, or null (see planFor)
+  usedTrials: string[] | null;
   walletAddress: string | null;
   onSubscribe: (plan: Plan, autoRenew: boolean) => void;
 }
@@ -78,14 +80,15 @@ const buttonLabel = (flow: SubscribeFlow, cta: string) => {
 
 // picking a plan in the sheet; mounted afresh each time the sheet opens
 const PlanChoice = (props: PlanChoiceProps) => {
-  const { plans, initialServiceId, initialKeepAfterTrial, flow, status, walletAddress, onSubscribe } = props;
+  const { plans, initialServiceId, initialKeepAfterTrial, flow, status, usedTrials, walletAddress, onSubscribe } =
+    props;
   // reopened during an attempt, the sheet starts from that attempt's choices, not the defaults
   const [serviceId, setServiceId] = useState(flow.phase === "idle" ? initialServiceId : flow.plan.serviceId);
   const [keepAfterTrial, setKeepAfterTrial] = useState(flow.phase === "idle" ? initialKeepAfterTrial : flow.autoRenew);
 
   const busy = isBusy(flow);
   // while subscribing, the sheet shows what is being signed; otherwise the plan as this wallet would get it
-  const plan = busy ? flow.plan : planFor(status, plans.find(p => p.serviceId === serviceId) ?? plans[0]);
+  const plan = busy ? flow.plan : planFor(status, usedTrials, plans.find(p => p.serviceId === serviceId) ?? plans[0]);
   const keepAfter = busy ? flow.autoRenew : keepAfterTrial;
   const isTrial = plan.trialSecs > 0;
   // a paid plan always renews; a trial renews only if the user keeps it on
